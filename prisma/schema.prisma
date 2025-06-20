@@ -1,0 +1,60 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider     = "prisma-client"
+  output       = "../src/generated/prisma"
+  moduleFormat = "esm"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id String @id @default(cuid(2))
+  name String
+
+  telegramId String @unique
+
+  // relations
+  telegram TelegramUser?
+  details DetailsUser?
+
+  likesGiven LiekUser[] @relation("fromLikesUser")
+  likesReceived LiekUser[] @relation("toLikesUser")
+}
+
+model TelegramUser {
+  id String @id
+  username String?
+  userId String @unique
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model DetailsUser {
+  description String?
+  country String?
+  district String?
+  town String?
+  age String?
+
+  sex String @default("None")
+  interest String @default("None")
+
+  userId String @unique
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model LiekUser {
+  fromId String
+  toId String
+  from User @relation("fromLikesUser", fields: [fromId], references: [id], onDelete: Cascade)
+  to User @relation("toLikesUser", fields: [toId], references: [id], onDelete: Cascade)
+  @@unique([fromId, toId])
+}
