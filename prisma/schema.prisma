@@ -21,6 +21,8 @@ model User {
 
   telegramId String @unique
 
+  mainFoto String @default("https://www.w3schools.com/howto/img_avatar.png")
+
   // relations
   telegram TelegramUser?
   details DetailsUser?

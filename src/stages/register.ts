@@ -1,4 +1,4 @@
-import { Scenes } from "telegraf";
+import { Scenes, Markup } from "telegraf";
 import { MyContext } from "../types/sceneSession";
 import { prisma } from "../prisma"
 
@@ -20,24 +20,34 @@ export default new Scenes.WizardScene<MyContext>(
       return;
     }
     ctx.scene.session.age = age
-    await ctx.reply("Gen (Male / Female)?")
+    await ctx.reply(
+      'Ce ești?',
+      Markup.inlineKeyboard([
+        Markup.button.callback('Masculin', 'Male'),
+        Markup.button.callback('Feminin', 'Female'),
+      ])
+    )
     return ctx.wizard.next()
   },
   async (ctx) => {
-    const sex = ctx.message?.['text']
-    if(sex !== "Male" || sex !== "Female") {
-      await ctx.reply("Genuri disponibile: 'Male'/'Female'")
+    if(!ctx.callbackQuery) return
+    if("data" in ctx.callbackQuery) {
+      ctx.scene.session.sex = ctx.callbackQuery.data == "Male" ? "Male" : "Female"
     }
-    ctx.scene.session.sex = sex
-    await ctx.reply("Interesat (Male / Female)")
+    await ctx.reply(
+      'Ce te interesează să vezi?',
+      Markup.inlineKeyboard([
+        Markup.button.callback('Masculin', 'Male'),
+        Markup.button.callback('Feminin', 'Female'),
+      ])
+    )
     return ctx.wizard.next()
   },
   async (ctx) => {
-    const interest = ctx.message?.['text']
-    if(interest !== "Male" || interest !== "Female") {
-      await ctx.reply("Genuri disponibile: 'Male'/'Female'")
+    if(!ctx.callbackQuery) return
+    if("data" in ctx.callbackQuery) {
+      ctx.scene.session.interest = ctx.callbackQuery.data == "Male" ? "Male" : "Female"
     }
-    ctx.scene.session.interest = interest
     await ctx.reply("Descriere")
     return ctx.wizard.next()
   },

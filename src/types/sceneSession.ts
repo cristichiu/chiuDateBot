@@ -13,6 +13,10 @@ export interface MyWizardSession extends Scenes.WizardSessionData {
   country?: ICountry
   district?: string
   town?: string
+  firstMessage?: number
+  photo?: string
 }
 
-export type MyContext = Scenes.WizardContext<MyWizardSession>;
+export type MyContext = Scenes.WizardContext<MyWizardSession> & {
+  user?: any
+};
