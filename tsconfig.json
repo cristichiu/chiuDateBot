@@ -1,23 +1,22 @@
 {
   "extends": "@tsconfig/node23/tsconfig.json",
-  "include": [],
   "compilerOptions": {
     "composite": true,
+    "target": "ESNext",
+    "lib": ["ESNext"],
+    "rootDir": ".",
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
     "types": ["node"],
-    "rootDir": ".",
-    "outDir": "dist",
-    "lib": ["ESNext"],
-    "target": "ESNext",
-    "esModuleInterop": false,
+    "allowImportingTsExtensions": false,
     "noImplicitOverride": true,
     "noImplicitReturns": true,
     "noUncheckedIndexedAccess": true,
-    "noUncheckedSideEffectImports": true,
-    "allowImportingTsExtensions": true,
-    "noEmit": true,
+    "noEmit": false,
+    "outDir": "dist",
     "allowSyntheticDefaultImports": true,
-    "erasableSyntaxOnly": true
-  }
+    "esModuleInterop": false,
+    "noUncheckedSideEffectImports": true
+  },
+  "include": ["src"]
 }
