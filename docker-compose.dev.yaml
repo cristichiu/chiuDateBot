@@ -3,7 +3,7 @@ services:
     image: postgres:17
     restart: on-failure
     environment:
-      POSTGRES_USER: events
-      POSTGRES_PASSWORD: eventspwd
+      POSTGRES_USER: dating
+      POSTGRES_PASSWORD: datingpwd
     ports:
       - "5434:5432"

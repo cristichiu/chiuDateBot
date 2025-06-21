@@ -42,7 +42,7 @@ model DetailsUser {
   country String?
   district String?
   town String?
-  age String?
+  age Int?
 
   sex String @default("None")
   interest String @default("None")
