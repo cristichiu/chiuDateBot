@@ -1,96 +1,118 @@
+import 'dotenv/config';
+
 import { Scenes, session } from "telegraf";
 
-import { bot } from "./bot";
-import { MyContext } from "./types/sceneSession";
+import { bot } from "./bot.js";
+import { MyContext } from "./types/sceneSession.js";
 
-import register from "./stages/register";
-import test from "./stages/test";
+import register from "./stages/register.js";
+import { seeUsers } from "./menu/index.js";
+import { seeUsers as seeusersF } from "./menu/seeUsers.js";
+import { prisma } from "./prisma.js";
+import { caption, giveMeProfileOptions, inlineKeyboard, showToPublicAdditions } from "./utils/profile.js";
 
-import { prisma } from "./prisma";
-
-const stage = new Scenes.Stage<MyContext>([register, test]);
+const stage = new Scenes.Stage<MyContext>([register]);
 
 bot.use(session())
 bot.use(stage.middleware())
 
-bot.use(async (ctx, next) => {
-  if (!ctx.from) return next();
-
-  const telegramId = String(ctx.from.id);
-
-  const user = await prisma.user.findUnique({
-    where: { telegramId },
-  })
-
-  // if (!user) ctx.scene.enter("register")
-  ctx.user = user;
-
-  return next();
-});
-
-function renderProfilePreview(session: any) {
-  const {
-    name = "⚪ Ex: Ana",
-    age = "⚪ Ex: 25",
-    sex = "⚪ Ex: Female",
-    description = "⚪ Ex: Îmi place să călătoresc",
-    country = "Moldova",
-    district = "⚪ Ex: Rîșcani",
-    town = "⚪ Ex: Chișinău",
-  } = session as any;
-
-  return `
-👤 ${name}, ${age} ani, ${sex == "Male" ? "Bărbat" : "Femeie"}
-
-📝 ${description}
-
-🗺️ ${town}, ${district}
-`.trim();
-}
-
 bot.start(async (ctx) => {
-  if(ctx.user) {
-    ctx.reply("Ai deja cont")
+  const user = await prisma.user.findUnique({
+    where: {
+      telegramId: String(ctx.from.id)
+    }
+  })
+  if(!user) {
+    ctx.scene.enter("register")
+  } else {
+    ctx.reply("Ai deja cont, /delete pentru a sterge")
   }
 })
 
-bot.command("test", async (ctx) => {
-  ctx.scene.enter("test")
-})
-
-bot.command("test2", async (ctx) => {
-  const users = await prisma.user.findMany({
-    include: {
-      details: true,
-      telegram: true
-    }
-  })
-  const user = users[1]
-  if(!user) return
-  await ctx.replyWithPhoto(
-    user.mainFoto,
+async function skip(ctx: any) {
+  ctx.session.originalMessageId ? ctx.telegram.deleteMessage(ctx.chat!.id, ctx.session.originalMessageId) : {}
+  const target = ctx.session.users[++ctx.session.currentUserIndex]
+  if(!target) {
+    ctx.reply("Nu mai sunt utilizatori, incepe de la incaput dand click pe butonul " + seeUsers)
+    return
+  }
+  const options = giveMeProfileOptions(target)
+  const sent = await ctx.replyWithPhoto(
+    "https://www.w3schools.com/howto/img_avatar.png",
     {
-      caption: user.details?.description ?? "",
+      caption: caption(options),
       parse_mode: "Markdown",
       reply_markup: {
-        inline_keyboard: [
-          [
-            { text: `${user.name}, ${user.details?.age} ani, ${user.details?.sex == "Male" ? "Bărbat" : "Femeie"}`, callback_data: "message" }
-          ],
-          [
-            { text: `${user.details?.town}, ${user.details?.district}`, callback_data: "message" }
-          ],
-          [
-            { text: "❌", callback_data: "pass" },
-            { text: "❤️", callback_data: "smash" },
-          ]
-        ]
+        inline_keyboard: inlineKeyboard(options, showToPublicAdditions()),
       }
     }
   );
+  ctx.session.originalMessageId = sent.message_id
+}
+
+bot.hears(seeUsers, seeusersF)
+
+bot.action("smash", async (ctx) => {
+  const user = await prisma.user.findUnique({
+    where: {
+      telegramId: String(ctx.from.id)
+    },
+    include: {
+      telegram: true
+    }
+  })
+  ctx.session.currentUserIndex = ctx.session.currentUserIndex ?? 0
+  if(!ctx.session.users || !ctx.session.users[ctx.session.currentUserIndex]) {
+    await ctx.reply("Ceva nu a mers cum trebuie. Incepe de la inceput dand click pe butonul " + seeUsers)
+    return
+  }
+  const target = ctx.session.users[ctx.session.currentUserIndex]
+  if(!target || !user) {
+    await ctx.reply("Ceva nu a mers cum trebuie. Incepe de la inceput dand click pe butonul " + seeUsers)
+    return
+  }
+  await prisma.liekUser.create({
+    data: {
+      fromId: user.id,
+      toId: target.id
+    }
+  })
+  const otherOneLiked = await prisma.liekUser.findUnique({
+    where: {
+      fromId_toId: {
+        fromId: target.id,
+        toId: user.id
+      }
+    },
+    include: {
+      to: {
+        include: {
+          telegram: true
+        }
+      }
+    }
+  })
+  if(otherOneLiked) {
+    await ctx.reply(`Am gasit un match, scrie un salut aici @${otherOneLiked.to.telegram?.username}`)
+    ctx.telegram.sendMessage(target.telegramId, `Cineva te-a apreciat, scrie un salut aici @${user.telegram?.username}`)
+  } else {
+    await skip(ctx)
+  }
 })
 
-bot.launch()
+bot.command("delete", async (ctx) => {
+  await prisma.user.delete({
+    where: {
+      telegramId: String(ctx.from.id)
+    }
+  })
+  await ctx.reply("Am sters contul tau cu succes. Pentru a face altu /test")
+})
+
+bot.action("pass", (ctx) => skip(ctx))
+
+console.log("Bot online.")
+await bot.launch()
 
 process.once('SIGINT', () => bot.stop('SIGINT'))
 process.once('SIGTERM', () => bot.stop('SIGTERM'))

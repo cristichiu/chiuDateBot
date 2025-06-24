@@ -1,4 +1,5 @@
 import { Scenes } from "telegraf";
+import { User } from "../generated/prisma/client.js";
 
 type ISex = "None" | "Male" | "Female"
 type ICountry = "Moldova"
@@ -16,7 +17,14 @@ export interface MyWizardSession extends Scenes.WizardSessionData {
   firstMessage?: number
   photo?: string
 }
+interface MySession extends Scenes.WizardSession {
+  // will be available globally under `ctx.session.*
+  users?: User[];
+  currentUserIndex?: number
+  originalMessageId?: number
+}
 
 export type MyContext = Scenes.WizardContext<MyWizardSession> & {
   user?: any
+  session: MySession
 };
